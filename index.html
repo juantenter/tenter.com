@@ -196,6 +196,90 @@
   .dot.r { background: #ff5f57; }
   .dot.y { background: #febc2e; }
   .dot.g { background: #28c840; }
+
+  /* ===== SECRET OVERLAY ===== */
+  #secretOverlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: #000;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+  }
+  #secretOverlay.active {
+    display: flex;
+  }
+  #matrixCanvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  #secretPhoto {
+    position: relative;
+    z-index: 2;
+    width: 95vw;
+    height: 95vh;
+    object-fit: cover;
+    border: 3px solid #00ff41;
+    box-shadow: 0 0 60px #00ff41, 0 0 120px #00ff4188;
+    border-radius: 4px;
+    image-rendering: pixelated;
+    opacity: 0;
+    transition: opacity 0.05s;
+  }
+
+  /* Shake the photo on beat — fast and violent */
+  @keyframes photoShakeAnim {
+    0%   { transform: translate(0, 0) rotate(0deg) scale(1); }
+    8%   { transform: translate(-8px, -6px) rotate(-2deg) scale(1.03); }
+    16%  { transform: translate(9px, 5px) rotate(2.5deg) scale(0.97); }
+    24%  { transform: translate(-7px, 8px) rotate(-1.5deg) scale(1.02); }
+    32%  { transform: translate(8px, -7px) rotate(2deg) scale(0.98); }
+    40%  { transform: translate(-9px, 4px) rotate(-3deg) scale(1.03); }
+    48%  { transform: translate(7px, -8px) rotate(1.5deg) scale(0.97); }
+    56%  { transform: translate(-6px, 7px) rotate(-2.5deg) scale(1.02); }
+    64%  { transform: translate(9px, -5px) rotate(2deg) scale(0.98); }
+    72%  { transform: translate(-8px, 6px) rotate(-1deg) scale(1.01); }
+    80%  { transform: translate(6px, -7px) rotate(2.5deg) scale(0.99); }
+    88%  { transform: translate(-5px, 5px) rotate(-2deg) scale(1.02); }
+    100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+  }
+
+  #secretPhoto.photoShake {
+    animation: photoShakeAnim 0.12s infinite;
+  }
+
+  @keyframes crazyShake {
+    0%   { transform: translate(0,0) rotate(0deg); }
+    5%   { transform: translate(-18px, 12px) rotate(-3deg); }
+    10%  { transform: translate(20px, -15px) rotate(4deg); }
+    15%  { transform: translate(-22px, 8px) rotate(-5deg); }
+    20%  { transform: translate(18px, 18px) rotate(3deg); }
+    25%  { transform: translate(-10px, -20px) rotate(-2deg); }
+    30%  { transform: translate(25px, 10px) rotate(6deg); }
+    35%  { transform: translate(-20px, -12px) rotate(-4deg); }
+    40%  { transform: translate(15px, 22px) rotate(3deg); }
+    45%  { transform: translate(-25px, 5px) rotate(-6deg); }
+    50%  { transform: translate(20px, -18px) rotate(5deg); }
+    55%  { transform: translate(-12px, 15px) rotate(-3deg); }
+    60%  { transform: translate(22px, -8px) rotate(4deg); }
+    65%  { transform: translate(-18px, 20px) rotate(-5deg); }
+    70%  { transform: translate(10px, -22px) rotate(3deg); }
+    75%  { transform: translate(-24px, 12px) rotate(-4deg); }
+    80%  { transform: translate(20px, 18px) rotate(5deg); }
+    85%  { transform: translate(-15px, -15px) rotate(-3deg); }
+    90%  { transform: translate(18px, 10px) rotate(4deg); }
+    95%  { transform: translate(-20px, -8px) rotate(-2deg); }
+    100% { transform: translate(0,0) rotate(0deg); }
+  }
+
+  .shaking {
+    animation: crazyShake 0.15s infinite !important;
+  }
+
 </style>
 </head>
 <body>
@@ -480,6 +564,14 @@ Tenter Juan - TikTok`;
 `PUBLIC COMMENT SYSTEM OPENED`;
     }
 
+
+    else if (cmd === "/dafeds_bf") {
+      // SECRET COMMAND - no output, just activate
+      terminalInput.value = "";
+      activateSecretMode();
+      return;
+    }
+
     else {
       terminalOutput.innerHTML =
 `COMMAND NOT FOUND
@@ -518,6 +610,13 @@ function addComment() {
   document.getElementById("commentText").value = "";
 }
 
+// Preload secret audio silently the moment page loads
+window._secretAudio = new Audio();
+window._secretAudio.src = 'https://archive.org/download/lilpumpboss/Lil%20Pump%20-%20Boss%20%28Official%20Music%20Video%29.mp3';
+window._secretAudio.preload = 'auto';
+window._secretAudio.volume = 1.0;
+window._secretAudio.load(); // start buffering immediately
+
 window.addEventListener("load", () => {
   const comments =
     JSON.parse(localStorage.getItem("tenterComments")) || [];
@@ -537,7 +636,81 @@ window.addEventListener("load", () => {
     commentList.appendChild(comment);
   });
 });
+
+// ===== SECRET MODE =====
+function activateSecretMode() {
+  const overlay = document.getElementById('secretOverlay');
+  overlay.classList.add('active');
+
+  // Matrix rain
+  const canvas = document.getElementById('matrixCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const chars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲンABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&';
+  const fontSize = 14;
+  const cols = Math.floor(canvas.width / fontSize);
+  const drops = Array(cols).fill(1);
+
+  function drawMatrix() {
+    ctx.fillStyle = 'rgba(0,0,0,0.05)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#00ff41';
+    ctx.font = fontSize + 'px monospace';
+    for (let i = 0; i < drops.length; i++) {
+      const text = chars[Math.floor(Math.random() * chars.length)];
+      ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+      if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+      drops[i]++;
+    }
+  }
+  const matrixInterval = setInterval(drawMatrix, 33);
+
+  // Shake the whole body
+  document.body.classList.add('shaking');
+
+  // 100% browser-native dubstep using Web Audio API — no external links, no CORS, no blocked autoplay
+  // Audio already preloaded — instant play
+  const photo = document.getElementById('secretPhoto');
+  // Keep photo hidden until phone notification hits
+  photo.style.opacity = '0';
+  photo.style.transform = 'translateY(0)';
+  photo.classList.remove('drop', 'bounce', 'photoShake');
+
+  if (window._secretAudio) {
+    window._secretAudio.currentTime = 0;
+    window._secretAudio.play().catch(() => {});
+  }
+
+  // Show photo after 8 seconds
+  setTimeout(() => {
+    photo.style.opacity = '1';
+    photo.classList.add('photoShake');
+  }, 8000);
+
+  // Stop shake after 5 seconds
+  setTimeout(() => {
+    document.body.classList.remove('shaking');
+  }, 5000);
+
+  // Click overlay to close
+  overlay.addEventListener('click', () => {
+    overlay.classList.remove('active');
+    clearInterval(matrixInterval);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (window._secretAudio) { window._secretAudio.pause(); window._secretAudio.currentTime = 0; window._secretAudio = null; }
+  }, { once: true });
+}
+
 </script>
+
+
+<!-- SECRET OVERLAY -->
+<div id="secretOverlay">
+  <canvas id="matrixCanvas"></canvas>
+  <img id="secretPhoto" src="data:image/jpeg;base64,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" alt="???" />
+</div>
 
 </body>
 </html>
